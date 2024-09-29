@@ -3,6 +3,7 @@ import Webcam from 'react-webcam';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+
 const InicioSesionFacial = () => {
     const [loginStatus, setLoginStatus] = useState(null); // Estado del inicio de sesión
     const [isUserIdentified, setIsUserIdentified] = useState(false); // Indica si el usuario ha sido identificado
@@ -31,7 +32,7 @@ const InicioSesionFacial = () => {
             formData.append('face_login', blob, 'face_login.png');
 
             // Enviar la imagen al backend
-            const response = await axios.post('http://localhost:8000/api/inicioSesionFacial/', formData, {
+            const response = await axios.post('https://backendsenauthenticator.up.railway.app/api/inicio-sesion-facial/', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }

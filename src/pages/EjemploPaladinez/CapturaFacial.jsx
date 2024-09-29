@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+
 function CapturaFacial() {
     const [file, setFile] = useState(null);
     const [error, setError] = useState(null);
-    const [registroExitoso, setRegistroExitoso] = useState(false); // Estado para mostrar el mensaje de éxito
-    const [mostrarBotonAceptar, setMostrarBotonAceptar] = useState(false); // Estado para mostrar el botón de "Aceptar"
+    const [registroExitoso, setRegistroExitoso] = useState(false);
+    const [mostrarBotonAceptar, setMostrarBotonAceptar] = useState(false);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const streamRef = useRef(null);
@@ -30,12 +31,19 @@ function CapturaFacial() {
             .then(stream => {
                 streamRef.current = stream;
                 videoRef.current.srcObject = stream;
-                videoRef.current.play();
+
+                // Añadir el evento para asegurar que el video se reproduzca después de cargar los metadatos
+                videoRef.current.addEventListener('loadedmetadata', () => {
+                    videoRef.current.play().catch(err => {
+                        console.error("Error al intentar reproducir el video:", err);
+                    });
+                });
             })
             .catch(err => {
                 console.error("Error al acceder a la cámara: ", err);
             });
     };
+
 
     const stopCamera = () => {
         if (streamRef.current) {
@@ -60,24 +68,33 @@ function CapturaFacial() {
 
     const submitData = async (capturedFile) => {
         const nombreCompleto = localStorage.getItem('nombreCompleto');
+        const tipoDocumento = localStorage.getItem('tipoDocumento');
         const numeroDocumento = localStorage.getItem('numeroDocumento');
+        const email = localStorage.getItem('email');
+        const password = localStorage.getItem('password');
 
-        if (!capturedFile || !nombreCompleto || !numeroDocumento) {
+        if (!capturedFile || !nombreCompleto || !tipoDocumento || !numeroDocumento || !email || !password) {
             setError("Faltan datos. No se puede registrar.");
             return;
         }
 
         const formData = new FormData();
-        formData.append('nombre_completo', nombreCompleto);
-        formData.append('numero_documento', numeroDocumento);
+        formData.append('first_name', nombreCompleto);
+        formData.append('tipo_documento_usuario', tipoDocumento);
+        formData.append('numero_documento_usuario', numeroDocumento);
+        formData.append('email', email);
+        formData.append('password', password);
         formData.append('face_register', capturedFile);
 
         try {
-            await axios.post('http://localhost:8000/api/registroFacial/', formData, {
+            // Agrega los headers que el backend espera, incluyendo autenticación si es necesario
+            const token = localStorage.getItem('token'); // Suponiendo que guardas un token JWT
+            const response = await axios.post('https://backendsenauthenticator.up.railway.app/api/usuarios/', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${token}`,  // Agrega el token de autenticación si es necesario
                 },
-            });
+            }); 
 
             // Mostrar mensaje de éxito y el botón de aceptar después de 2 segundos
             setRegistroExitoso(true);
@@ -85,8 +102,8 @@ function CapturaFacial() {
                 setMostrarBotonAceptar(true);
             }, 2000);
         } catch (err) {
-            console.error("Error al enviar los datos:", err);
-            setError(err.response ? err.response.data : { message: err.message });
+            console.error("Error al enviar los datos:", err.response?.data || err.message);
+            setError(err.response?.data || { message: err.message }); // Modificado para almacenar solo el mensaje
         }
     };
 
@@ -101,7 +118,7 @@ function CapturaFacial() {
                 <video ref={videoRef} style={{ width: '320px', height: '240px' }} />
                 <canvas ref={canvasRef} style={{ display: 'none' }} width="640" height="480"></canvas>
             </div>
-            {error && <div style={{ color: 'red' }}>Error: {error.message || error}</div>}
+            {error && <div style={{ color: 'red' }}>Error: {error}</div>} {/* Modificado para mostrar solo el mensaje de error */}
 
             {registroExitoso && <p>Registro exitoso. ¡Gracias por registrarte!</p>}
 
